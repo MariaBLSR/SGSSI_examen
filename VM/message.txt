@@ -1,0 +1,93 @@
+# Self signed certificate (Sin confianza)
+
+https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-apache-in-ubuntu-20-04
+
+Activar el modulo SSL en Apache:
+
+```
+$ sudo a2enmod ssl
+$ sudo systemctl restart apache2
+```
+
+Crear el certificado SSL:
+
+```
+$ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/apache-selfsigned.key -out /etc/ssl/certs/apache-selfsigned.crt
+
+Country Name (2 letter code) [AU]:ES
+State or Province Name (full name) [Some-State]:Bizkaia
+Locality Name (eg, city) []:Bilbo
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:EIB 
+Organizational Unit Name (eg, section) []:LSI
+Common Name (e.g. server FQDN or YOUR name) []: 35.216.188.54
+Email Address []:mikel.egana.aranguren.ehu@gmail.com
+```
+
+Configurar Apache para que use el certificado
+
+Crear archivo `/etc/apache2/sites-available/35.216.188.54.conf` (Common name de certificado y Server Name tienen que ser lo mismo):
+
+```
+<VirtualHost *:443>
+   ServerName 35.216.188.54
+   DocumentRoot /var/www/35.216.188.54
+
+   SSLEngine on
+   SSLCertificateFile /etc/ssl/certs/apache-selfsigned.crt
+   SSLCertificateKeyFile /etc/ssl/private/apache-selfsigned.key
+</VirtualHost>
+```
+
+Crear documento de prueba:
+
+```
+$ sudo mkdir /var/www/35.216.188.54
+$ sudo vim /var/www/35.216.188.54/index.html
+```
+
+Activar la configuracion:
+
+```
+$ sudo a2ensite 35.216.188.54.conf
+```
+
+Verificar que no hay errores:
+
+```
+$ sudo apache2ctl configtest
+```
+
+Recargar Apache:
+
+```
+$ sudo systemctl reload apache2
+```
+
+Ir a https://35.216.188.54/, Advanced, Proceed
+
+Redireccionar de HTTP a HTTPS (Ojo con el trailing slash):
+
+```
+$ sudo vim 35.216.188.54.conf
+
+<VirtualHost *:443>
+   ServerName 35.216.188.54
+   DocumentRoot /var/www/35.216.188.54
+
+   SSLEngine on
+   SSLCertificateFile /etc/ssl/certs/apache-selfsigned.crt
+   SSLCertificateKeyFile /etc/ssl/private/apache-selfsigned.key
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName 35.216.188.54
+    Redirect / https://35.216.188.54/
+</VirtualHost>
+```
+
+```
+sudo apachectl configtest
+sudo systemctl reload apache2
+```
+
+http://35.216.188.54/ redirige a https://35.216.188.54/
